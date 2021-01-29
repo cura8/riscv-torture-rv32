@@ -1,0 +1,4 @@
+[DEFAULT]
+checkers = mypy3,flake8
+mypy_config_file = ./mypy.ini
+

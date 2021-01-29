@@ -1,75 +1,29 @@
-# Convenience Makefile
+# This should probably be replaced by some python code
+# it may not be smaller but there will be less manual work
+# to update
 
-SBT ?= java -Xmx1G -Xss8M -XX:MaxPermSize=128M -jar sbt-launch.jar
-RTL_CONFIG := DefaultConfig
-C_SIM := ../emulator/emulator-rocketchip-$(RTL_CONFIG)
-R_SIM := ../vsim/simv-rocketchip-$(RTL_CONFIG)
-TEST := output/test.S
-OPTIONS := $(empty)
-SUITE := output
-CONFIG := config/default.config
-COMMIT := none
-empty :=
-space := $(empty) $(empty)
-cfgopt := $(space)-f$(space)
-gitopt := $(space)-g$(space)
-CFG := $(subst $(space),$(cfgopt),$(CONFIG))
-GITCMT := $(subst $(space),$(gitopt),$(COMMIT))
+IP_NAME=riscv-torture-rv32
 
-.phony: gen ctest rtest itest igentest cgentest rgentest \
-cnight rnight crnight csuite rsuite \
+TOP:=$(shell pwd)
 
-gen:
-	$(SBT) 'generator/run $(OPTIONS)'
+IP_NAME_LC = $(shell echo $(IP_NAME) | tr '[:upper:]' '[:lower:]')
+IP_NAME_UC = $(shell echo $(IP_NAME) | tr '[:lower:]' '[:upper:]')
 
-csuite:
-	for i in `ls $(SUITE) | grep .S` ; do echo $$i ; \
-	result=`make ctest TEST=$(SUITE)/$$i OPTIONS="-s false" | grep 'Simulation failed\|signatures match'` ; \
-	echo $$result ; done
-	rm $(SUITE)/tes*[!.S]
 
-rsuite:
-	for i in `ls $(SUITE) | grep .S` ; do echo $$i ; \
-	result=`make rtest TEST=$(SUITE)/$$i OPTIONS="-s false" | grep 'Simulation failed\|signatures match'` ; \
-	echo $$result ; done
-	rm $(SUITE)/tes*[!.S]
 
-crsuite:
-	for i in `ls $(SUITE) | grep .S` ; do echo $$i ; \
-	result=`make crtest TEST=$(SUITE)/$$i OPTIONS="-s false" | grep 'Simulation failed\|signatures match'` ; \
-	echo $$result ; done
-	rm $(SUITE)/tes*[!.S]
+# Virtualenv setup
 
-igentest:
-	$(SBT) 'testrun/run'
+SHELL := /bin/bash
+mkvenv:
+	. `which virtualenvwrapper.sh` && mkvirtualenv -p python3 $(IP_NAME_LC)
 
-cgentest:
-	$(SBT) 'testrun/run -c $(C_SIM) $(OPTIONS)'
+freeze:
+	pip freeze > requirements.txt
 
-rgentest:
-	$(SBT) 'testrun/run -r $(R_SIM) $(OPTIONS)'
+install_env:
+	pip install -r requirements.txt
 
-crgentest:
-	$(SBT) 'testrun/run -c $(C_SIM) -r $(R_SIM) $(OPTIONS)'
+export: TOP
 
-itest:
-	$(SBT) 'testrun/run -a $(TEST) $(OPTIONS)'
-
-ctest:
-	$(SBT) 'testrun/run -c $(C_SIM) -a $(TEST) $(OPTIONS)'
-
-rtest:
-	$(SBT) 'testrun/run -r $(R_SIM) -a $(TEST) $(OPTIONS)'
-
-crtest:
-	$(SBT) 'testrun/run -c $(C_SIM) -r $(R_SIM) -a $(TEST) $(OPTIONS)'
-
-cnight:
-	$(SBT) 'overnight/run -c $(C_SIM) -g $(COMMIT) $(OPTIONS)'
-
-rnight:
-	$(SBT) 'overnight/run -r $(R_SIM) -g $(COMMIT) $(OPTIONS)'
-
-crnight:
-	$(SBT) 'overnight/run -c $(C_SIM) -r $(R_SIM) -g $(COMMIT) $(OPTIONS)'
-
+check-syntax:
+	TOP=$(TOP) iverilog -t null -o tb  -c sim/verilog/vlist_tb.txt
